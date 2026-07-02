@@ -118,6 +118,7 @@
 const SHEET_ID = "1rf7rVlTW4lAlK_VDF4I06TQkl-SvgZUJwZXLuaZxQX0";
 const GID = "755157725";
 const AUTO_REFRESH_MS = 5 * 60 * 1000;
+const HIDDEN_PHASES = ["Infra preparation", "Data Migration"];
 
 let lastGroups = null;
 
@@ -345,7 +346,8 @@ async function refresh(){
   try {
     const json = await loadSheetJSONP();
     const items = parseRows(json.table.rows);
-    const groups = buildGroups(items);
+    const allGroups = buildGroups(items);
+    const groups = allGroups.filter(g => !HIDDEN_PHASES.includes((g.header.name || "").trim()));
     lastGroups = groups;
     renderCards(groups);
     renderChart(groups);
