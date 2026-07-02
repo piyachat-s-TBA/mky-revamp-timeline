@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>MKY Website Revamp — Project Timeline</title>
+<title>MKY Website Revamp — Project Timeline (Overview)</title>
 <style>
   :root{
     --done-fill:#2f9e44; --done-track:#d3f9d8;
@@ -39,7 +39,7 @@
   .swatch{width:12px; height:12px; border-radius:3px; display:inline-block;}
   .chart-wrap{
     background:var(--bg); border:1px solid var(--grid); border-radius:8px;
-    overflow:auto; max-height:78vh; position:relative;
+    overflow:auto; position:relative;
   }
   svg{display:block;}
   .msg-box{
@@ -48,18 +48,13 @@
   }
   .msg-box.error{background:#fff5f5; border-color:#ffc9c9;}
   .msg-box button{margin-top:8px;}
-  .phase-band{cursor:pointer;}
-  .phase-label{font-size:12px; font-weight:600; fill:var(--text);}
-  .phase-sub{font-size:10px; fill:var(--muted);}
-  .task-label{font-size:11px; fill:var(--text);}
-  .task-label.indent{fill:var(--muted);}
+  .phase-label{font-size:13px; font-weight:600; fill:var(--text);}
+  .phase-sub{font-size:11px; fill:var(--muted);}
   .month-label{font-size:11px; fill:var(--muted);}
   .grid-line{stroke:var(--grid); stroke-width:1;}
   .today-line{stroke:#e03131; stroke-width:1.5; stroke-dasharray:4,3;}
   .today-label{font-size:10px; fill:#e03131; font-weight:600;}
-  .pic-label{font-size:10px; fill:var(--muted);}
   .row-alt{fill:#f8f9fa;}
-  .caret{font-size:11px; fill:var(--muted);}
   .auth-overlay{
     position:fixed; inset:0; background:#f8f9fa; display:flex; align-items:center; justify-content:center; z-index:1000;
   }
@@ -92,11 +87,11 @@
 
 <div id="appContent">
 <h1>MKY Website Revamp — Project Timeline</h1>
-<div class="subtitle" id="startDateLine">Live view synced from Google Sheets</div>
+<div class="subtitle">Overview — major phases only · Live view synced from Google Sheets</div>
 
 <div class="toolbar">
   <button id="refreshBtn">Refresh now</button>
-  <a href="overview.html">View overview ↗</a>
+  <a href="index.html">View detailed timeline ↗</a>
   <a href="https://docs.google.com/spreadsheets/d/1rf7rVlTW4lAlK_VDF4I06TQkl-SvgZUJwZXLuaZxQX0/edit?gid=755157725" target="_blank" rel="noopener">Open source sheet ↗</a>
   <span id="status">Loading…</span>
 </div>
@@ -115,8 +110,6 @@
   <span class="legend-item"><span class="swatch" style="background:var(--done-fill)"></span>Done</span>
   <span class="legend-item"><span class="swatch" style="background:var(--prog-fill)"></span>In progress</span>
   <span class="legend-item"><span class="swatch" style="background:var(--todo-fill)"></span>To do</span>
-  <span class="legend-item">◆ Milestone</span>
-  <span class="legend-item">Click a phase row to expand / collapse</span>
 </div>
 
 <div class="chart-wrap" id="chartWrap"></div>
@@ -127,7 +120,6 @@ const SHEET_ID = "1rf7rVlTW4lAlK_VDF4I06TQkl-SvgZUJwZXLuaZxQX0";
 const GID = "755157725";
 const AUTO_REFRESH_MS = 5 * 60 * 1000;
 
-let expanded = null;
 let lastGroups = null;
 
 function parseGvizDate(v){
@@ -161,12 +153,7 @@ function parseRows(rows){
     const pct = c[6] ? c[6].v : null;
     const pic = c[7] ? clean(c[7].v) : null;
     const isHeader = !pic;
-    const isMilestone = /milestone/i.test(name);
-    let indent = 0;
-    let displayName = name;
-    if (/^-\s*/.test(name)){ indent = 1; displayName = name.replace(/^-\s*/, ""); }
-    else if (/^\d+\.\d+/.test(name)){ indent = 1; }
-    items.push({id, name: displayName, start, end, duration, status, pct, pic, isHeader, isMilestone, indent});
+    items.push({id, name, start, end, duration, status, pct, pic, isHeader});
   }
   return items;
 }
@@ -263,22 +250,20 @@ function renderChart(groups){
   const wrap = document.getElementById("chartWrap");
   wrap.innerHTML = "";
 
-  const labelWidth = 460;
-  const rowHeight = 22;
-  const phaseHeaderHeight = 34;
+  const labelWidth = 220;
+  const rowHeight = 52;
   const pxPerDay = 6;
   const topPad = 50;
   const leftPad = 16;
   const rightPad = 90;
 
-  const allDated = [];
-  groups.forEach(g => g.children.forEach(c => { if (c.start && c.end) allDated.push(c); }));
-  if (!allDated.length){
-    wrap.innerHTML = "<div style=\"padding:24px;color:var(--muted);font-size:13px;\">No dated tasks found.</div>";
+  const dated = groups.filter(g => g.header.start && g.header.end);
+  if (!dated.length){
+    wrap.innerHTML = "<div style=\"padding:24px;color:var(--muted);font-size:13px;\">No dated phases found.</div>";
     return;
   }
-  const minDate = new Date(Math.min(...allDated.map(c => c.start.getTime())));
-  const maxDate = new Date(Math.max(...allDated.map(c => c.end.getTime())));
+  const minDate = new Date(Math.min(...dated.map(g => g.header.start.getTime())));
+  const maxDate = new Date(Math.max(...dated.map(g => g.header.end.getTime())));
   const chartStart = new Date(minDate.getFullYear(), minDate.getMonth(), 1);
   const chartEnd = new Date(maxDate.getFullYear(), maxDate.getMonth() + 1, 0);
 
@@ -287,13 +272,7 @@ function renderChart(groups){
 
   const totalDays = dayDiff(chartStart, chartEnd) + 1;
   const chartWidth = leftPad + labelWidth + totalDays * pxPerDay + rightPad;
-
-  let totalRows = 0;
-  groups.forEach(g => {
-    totalRows += 1;
-    if (expanded.has(g.header.name)) totalRows += g.children.length;
-  });
-  const chartHeight = topPad + totalRows * rowHeight + groups.length * (phaseHeaderHeight - rowHeight) + 24;
+  const chartHeight = topPad + groups.length * rowHeight + 24;
 
   const svg = document.createElementNS(svgNS, "svg");
   svg.setAttribute("width", chartWidth);
@@ -314,82 +293,31 @@ function renderChart(groups){
   svg.appendChild(el("line", {x1: closeX, y1: topPad - 16, x2: closeX, y2: chartHeight - 8, class: "grid-line"}));
 
   let y = topPad;
-  groups.forEach(g => {
-    const isOpen = expanded.has(g.header.name);
+  groups.forEach((g, i) => {
+    if (i % 2 === 1) svg.appendChild(el("rect", {x: 0, y: y, width: chartWidth, height: rowHeight, class: "row-alt"}));
+
+    const label = el("text", {x: leftPad, y: y + rowHeight / 2 - 4, class: "phase-label"});
+    label.textContent = `${g.header.name} (${g.children.length})`;
+    svg.appendChild(label);
+    const sub = el("text", {x: leftPad, y: y + rowHeight / 2 + 14, class: "phase-sub"});
+    sub.textContent = `${fmtDate(g.header.start)} – ${fmtDate(g.header.end)}`;
+    svg.appendChild(sub);
+
     const colors = statusColors(g.header.status);
-
-    const band = el("g", {class: "phase-band"});
-    band.appendChild(el("rect", {x: 0, y: y, width: chartWidth, height: phaseHeaderHeight, fill: "#f1f3f5"}));
-    const caret = el("text", {x: leftPad, y: y + phaseHeaderHeight / 2 + 4, class: "caret"});
-    caret.textContent = isOpen ? "▾" : "▸";
-    band.appendChild(caret);
-    const gLabel = el("text", {x: leftPad + 16, y: y + phaseHeaderHeight / 2 + 1, class: "phase-label"});
-    gLabel.textContent = `${g.header.name} (${g.children.length})`;
-    band.appendChild(gLabel);
-    const gSub = el("text", {x: leftPad + 16, y: y + phaseHeaderHeight / 2 + 14, class: "phase-sub"});
-    gSub.textContent = `${fmtDate(g.header.start)} – ${fmtDate(g.header.end)}`;
-    band.appendChild(gSub);
-
     if (g.header.start && g.header.end){
       const x1 = xForDate(g.header.start);
       const x2 = xForDate(new Date(g.header.end.getFullYear(), g.header.end.getMonth(), g.header.end.getDate() + 1));
       const w = Math.max(x2 - x1, 4);
-      const barY = y + phaseHeaderHeight / 2 - 6;
-      band.appendChild(el("rect", {x: x1, y: barY, width: w, height: 12, rx: 3, fill: colors.track}));
+      const barY = y + rowHeight / 2 - 11;
+      svg.appendChild(el("rect", {x: x1, y: barY, width: w, height: 22, rx: 6, fill: colors.track}));
       const pct = Math.max(0, Math.min(100, g.header.pct || 0));
       const fillW = Math.max(0, w * pct / 100);
-      if (fillW > 0) band.appendChild(el("rect", {x: x1, y: barY, width: fillW, height: 12, rx: 3, fill: colors.fill}));
-      const pctLabel = el("text", {x: x2 + 6, y: y + phaseHeaderHeight / 2 + 4, class: "phase-sub"});
+      if (fillW > 0) svg.appendChild(el("rect", {x: x1, y: barY, width: fillW, height: 22, rx: 6, fill: colors.fill}));
+      const pctLabel = el("text", {x: x2 + 6, y: y + rowHeight / 2 + 4, class: "phase-sub"});
       pctLabel.textContent = `${Math.round(pct)}%`;
-      band.appendChild(pctLabel);
+      svg.appendChild(pctLabel);
     }
-    band.addEventListener("click", () => {
-      if (expanded.has(g.header.name)) expanded.delete(g.header.name);
-      else expanded.add(g.header.name);
-      renderChart(lastGroups);
-    });
-    svg.appendChild(band);
-    y += phaseHeaderHeight;
-
-    if (isOpen){
-      g.children.forEach((t, i) => {
-        if (i % 2 === 1) svg.appendChild(el("rect", {x: 0, y: y, width: chartWidth, height: rowHeight, class: "row-alt"}));
-
-        const label = el("text", {x: leftPad + 16 + t.indent * 14, y: y + rowHeight / 2 + 4, class: t.indent ? "task-label indent" : "task-label"});
-        const displayText = t.name.length > 56 ? t.name.slice(0, 55) + "…" : t.name;
-        label.textContent = displayText;
-        if (t.name.length > 56){
-          const titleEl = document.createElementNS(svgNS, "title");
-          titleEl.textContent = t.name;
-          label.appendChild(titleEl);
-        }
-        svg.appendChild(label);
-
-        const tColors = statusColors(t.status);
-        if (t.start && t.end){
-          const x1 = xForDate(t.start);
-          const x2 = xForDate(new Date(t.end.getFullYear(), t.end.getMonth(), t.end.getDate() + 1));
-
-          if (t.isMilestone){
-            const cx = x1;
-            const cy = y + rowHeight / 2;
-            const r = 6;
-            const pts = `${cx},${cy - r} ${cx + r},${cy} ${cx},${cy + r} ${cx - r},${cy}`;
-            svg.appendChild(el("polygon", {points: pts, fill: tColors.fill, stroke: "#fff", "stroke-width": 1}));
-          } else {
-            const w = Math.max(x2 - x1, 4);
-            svg.appendChild(el("rect", {x: x1, y: y + 4, width: w, height: rowHeight - 8, rx: 3, fill: tColors.track}));
-            const pct = Math.max(0, Math.min(100, Number(t.pct) || 0));
-            const fillW = Math.max(0, w * pct / 100);
-            if (fillW > 0) svg.appendChild(el("rect", {x: x1, y: y + 4, width: fillW, height: rowHeight - 8, rx: 3, fill: tColors.fill}));
-          }
-          const picLabel = el("text", {x: x2 + 6, y: y + rowHeight / 2 + 4, class: "pic-label"});
-          picLabel.textContent = t.pic ? `${t.pic} · ${Math.round(Number(t.pct) || 0)}%` : `${Math.round(Number(t.pct) || 0)}%`;
-          svg.appendChild(picLabel);
-        }
-        y += rowHeight;
-      });
-    }
+    y += rowHeight;
   });
 
   const today = new Date();
@@ -420,9 +348,6 @@ async function refresh(){
     const items = parseRows(json.table.rows);
     const groups = buildGroups(items);
     lastGroups = groups;
-    if (expanded === null){
-      expanded = new Set(groups.map(g => g.header.name));
-    }
     renderCards(groups);
     renderChart(groups);
     showLoading(false);
