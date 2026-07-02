@@ -60,10 +60,37 @@
   .pic-label{font-size:10px; fill:var(--muted);}
   .row-alt{fill:#f8f9fa;}
   .caret{font-size:11px; fill:var(--muted);}
+  .auth-overlay{
+    position:fixed; inset:0; background:#f8f9fa; display:flex; align-items:center; justify-content:center; z-index:1000;
+  }
+  .auth-card{
+    background:#fff; border:1px solid var(--grid); border-radius:10px; padding:32px; width:280px; text-align:center;
+    box-shadow:0 2px 12px rgba(0,0,0,0.08);
+  }
+  .auth-card h2{font-size:16px; margin:0 0 16px 0;}
+  .auth-card input{
+    width:100%; padding:8px 10px; font-size:14px; border:1px solid #dee2e6; border-radius:6px; margin-bottom:10px; box-sizing:border-box;
+  }
+  .auth-card button{
+    width:100%; padding:8px 10px; font-size:14px; border-radius:6px; border:none; background:#212529; color:#fff; cursor:pointer;
+  }
+  .auth-card button:hover{ background:#000; }
+  .auth-error{color:#e03131; font-size:12px; margin-top:8px; display:none;}
+  #appContent{display:none;}
 </style>
 </head>
 <body>
 
+<div class="auth-overlay" id="authOverlay">
+  <div class="auth-card">
+    <h2>🔒 Enter password to view</h2>
+    <input type="password" id="authInput" placeholder="Password" autofocus>
+    <button id="authSubmit">Unlock</button>
+    <div class="auth-error" id="authError">Incorrect password, try again.</div>
+  </div>
+</div>
+
+<div id="appContent">
 <h1>MKY Website Revamp — Project Timeline</h1>
 <div class="subtitle" id="startDateLine">Live view synced from Google Sheets</div>
 
@@ -92,6 +119,7 @@
 </div>
 
 <div class="chart-wrap" id="chartWrap"></div>
+</div>
 
 <script>
 const SHEET_ID = "1rf7rVlTW4lAlK_VDF4I06TQkl-SvgZUJwZXLuaZxQX0";
@@ -408,8 +436,38 @@ async function refresh(){
 document.getElementById("refreshBtn").addEventListener("click", refresh);
 document.getElementById("retryBtn").addEventListener("click", refresh);
 
-refresh();
-setInterval(refresh, AUTO_REFRESH_MS);
+const AUTH_PASSWORD = "12345";
+const AUTH_KEY = "mky_timeline_auth";
+
+function startApp(){
+  document.getElementById("authOverlay").style.display = "none";
+  document.getElementById("appContent").style.display = "block";
+  refresh();
+  setInterval(refresh, AUTO_REFRESH_MS);
+}
+
+function tryAuth(){
+  const val = document.getElementById("authInput").value;
+  if (val === AUTH_PASSWORD){
+    sessionStorage.setItem(AUTH_KEY, "1");
+    startApp();
+  } else {
+    document.getElementById("authError").style.display = "block";
+    document.getElementById("authInput").value = "";
+    document.getElementById("authInput").focus();
+  }
+}
+
+document.getElementById("authSubmit").addEventListener("click", tryAuth);
+document.getElementById("authInput").addEventListener("keydown", (e) => {
+  if (e.key === "Enter") tryAuth();
+});
+
+if (sessionStorage.getItem(AUTH_KEY) === "1"){
+  startApp();
+} else {
+  document.getElementById("authInput").focus();
+}
 </script>
 </body>
 </html>
