@@ -7,7 +7,7 @@
   :root{
     --done-fill:#2f9e44; --done-track:#d3f9d8;
     --prog-fill:#f08c00; --prog-track:#ffe8cc;
-    --todo-fill:#adb5bd; --todo-track:#e9ecef;
+    --todo-fill:#5c636a; --todo-track:#dee2e6;
     --grid:#e9ecef; --text:#212529; --muted:#868e96; --bg:#ffffff;
   }
   *{box-sizing:border-box;}
@@ -297,7 +297,7 @@ function renderChart(groups){
     if (i % 2 === 1) svg.appendChild(el("rect", {x: 0, y: y, width: chartWidth, height: rowHeight, class: "row-alt"}));
 
     const label = el("text", {x: leftPad, y: y + rowHeight / 2 - 4, class: "phase-label"});
-    label.textContent = `${g.header.name} (${g.children.length})`;
+    label.textContent = g.header.name;
     svg.appendChild(label);
     const sub = el("text", {x: leftPad, y: y + rowHeight / 2 + 14, class: "phase-sub"});
     sub.textContent = `${fmtDate(g.header.start)} – ${fmtDate(g.header.end)}`;
