@@ -436,8 +436,14 @@ async function refresh(){
 document.getElementById("refreshBtn").addEventListener("click", refresh);
 document.getElementById("retryBtn").addEventListener("click", refresh);
 
-const AUTH_PASSWORD = "12345";
+// SHA-256 hash of the password (not the plain password itself, so it isn't readable via View Source)
+const AUTH_PASSWORD_HASH = "5994471abb01112afcc18159f6cc74b4f511b99806da59b3caf5a9c173cacfc5";
 const AUTH_KEY = "mky_timeline_auth";
+
+async function sha256Hex(text){
+  const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(text));
+  return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, "0")).join("");
+}
 
 function startApp(){
   document.getElementById("authOverlay").style.display = "none";
@@ -446,9 +452,10 @@ function startApp(){
   setInterval(refresh, AUTO_REFRESH_MS);
 }
 
-function tryAuth(){
+async function tryAuth(){
   const val = document.getElementById("authInput").value;
-  if (val === AUTH_PASSWORD){
+  const hash = await sha256Hex(val);
+  if (hash === AUTH_PASSWORD_HASH){
     sessionStorage.setItem(AUTH_KEY, "1");
     startApp();
   } else {
