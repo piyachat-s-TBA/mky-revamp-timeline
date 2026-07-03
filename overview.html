@@ -109,6 +109,7 @@
   <span class="legend-item"><span class="swatch" style="background:var(--done-fill)"></span>Done</span>
   <span class="legend-item"><span class="swatch" style="background:var(--prog-fill)"></span>In progress</span>
   <span class="legend-item"><span class="swatch" style="background:var(--todo-fill)"></span>To do</span>
+  <span class="legend-item">◆ Milestone</span>
 </div>
 
 <div class="chart-wrap" id="chartWrap"></div>
@@ -153,7 +154,8 @@ function parseRows(rows){
     const pct = c[6] ? c[6].v : null;
     const pic = c[7] ? clean(c[7].v) : null;
     const isHeader = !pic;
-    items.push({id, name, start, end, duration, status, pct, pic, isHeader});
+    const isMilestone = /milestone/i.test(name);
+    items.push({id, name, start, end, duration, status, pct, pic, isHeader, isMilestone});
   }
   return items;
 }
@@ -317,6 +319,20 @@ function renderChart(groups){
       pctLabel.textContent = `${Math.round(pct)}%`;
       svg.appendChild(pctLabel);
     }
+
+    (g.children || []).filter(c => c.isMilestone && c.start).forEach(m => {
+      const mColors = statusColors(m.status);
+      const cx = xForDate(m.start);
+      const cy = y + rowHeight / 2;
+      const r = 7;
+      const pts = `${cx},${cy - r} ${cx + r},${cy} ${cx},${cy + r} ${cx - r},${cy}`;
+      const diamond = el("polygon", {points: pts, fill: mColors.fill, stroke: "#fff", "stroke-width": 1.5});
+      const title = document.createElementNS(svgNS, "title");
+      title.textContent = `${m.name} — ${fmtDate(m.start)}`;
+      diamond.appendChild(title);
+      svg.appendChild(diamond);
+    });
+
     y += rowHeight;
   });
 
